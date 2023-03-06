@@ -1,10 +1,10 @@
 import axios from 'axios'
-import Cookies from 'js-cookie'
-import userConfig from '../../userConfig.json'
-console.log(userConfig, 'userconfig');
+import userConfig from '@/userConfig.json'
+
+
 declare let window: any;
 
-const ifProduct =  true;
+const ifProduct =  userConfig.xApiKey.length < 42;
 let request:any = null;
 
 
@@ -12,15 +12,12 @@ let request:any = null;
 import { MirrorWorld, ClusterEnvironment } from "@mirrorworld/web3.js"
 
 const mirrorworld = new MirrorWorld({
+  // devnet and mainnet
+  //  @ts-ignore
   apiKey: userConfig.xApiKey,
-  env: !ifProduct ? ClusterEnvironment.testnet : ClusterEnvironment.mainnet, // Can be ClusterEnvionment.mainnet for mainnet
-  // staging: true
+  env: userConfig.network === 'mainnet'  ? ClusterEnvironment.mainnet : ClusterEnvironment.testnet , // Can be ClusterEnvionment.mainnet for mainnet
+  staging: !ifProduct
 })
-console.log(process.env.NEXT_PUBLIC_BRANCH_NAME, 'process.env.NEXT_PUBLIC_BRANCH_NAME');
-console.log(ifProduct, 'ifProduct');
-console.log(ClusterEnvironment.testnet, 'ClusterEnvironment.testnet');
-console.log(ClusterEnvironment.mainnet, 'ClusterEnvironment.mainnet');
-console.log(!ifProduct ? ClusterEnvironment.testnet : ClusterEnvironment.mainnet,'env');
 
 
 const getAUTH = () => {
@@ -38,11 +35,12 @@ const requestInterception = () => {
 if(request) return;
 request =  axios.create({
   baseURL: ifProduct ? 
-  'https://api.mirrorworld.fun/v1/marketplace/'
-  : 'https://api-staging.mirrorworld.fun/v1/marketplace/' ,
+  `https://api.mirrorworld.fun/v1/marketplace/` 
+  : `https://api-staging.mirrorworld.fun/v1/marketplace/` ,
   headers: {
     // 'X-SSO-Token': Cookies.get('sso-t') || '',
     'Authorization': `Bearer ${getAUTH() || window?.localStorage?.auth}`,
+    //  @ts-ignore
     'x-api-key': userConfig.xApiKey
   },
 });
@@ -53,6 +51,7 @@ request =  axios.create({
 export const getCollectionInfo = async ()=>{
   requestInterception();
   const data =  await request.post('collections',  {
+    //  @ts-ignore
       collections: userConfig.collections
   })
   return data;
@@ -100,6 +99,7 @@ export const getCollectionNfts = async (param: object) => {
 export const getNftSearch = async (search: string) => {
   requestInterception();
   const data = await request.post(`nft/search`, {
+    //  @ts-ignore
       collections: userConfig.collections,
       search: search
   })
@@ -111,6 +111,7 @@ export const getNftSearch = async (search: string) => {
 export const getNftRecommend = async (search: string) => {
   requestInterception();
   const data = await request.post(`nft/search/recommend`, {
+    //  @ts-ignore
       collections: userConfig.collections,
   })
   return data
@@ -130,10 +131,11 @@ export const getNft = async (mintAddress: string)=> {
 // buy nft 
 export const buyNFT = async (mint_address:string, price:number) => {
   requestInterception();
-  const listing = await mirrorworld.buyNFT({
-    "mintAddress": mint_address,
-    "price": price,
-  })
+  const listing = await mirrorworld.listNFT({
+  mintAddress: `DSR5MAPbNxHvf12Ft8UFyxV6Vg766rr9quvRahKb1msr`,
+  price: 2, // Amount in SOL
+  auctionHouse: "76L2ZhMqn7kKTy5ZVCFZM36CbLivkA7Rot9NrXGATcD1" // Replace this!
+})
   // const data = await request.post(`https://api-staging.mirrorworld.fun/v1/devnet/solana/marketplace/buy
   // `, {
   //   "mint_address": mint_address,
@@ -202,7 +204,8 @@ export const getPrice = async (price:number) => {
   requestInterception();
   const data = await request.post(`nft/real_price`, {
     "price": price,
-    "fee": userConfig?.serviceFee *1000  // 0.001% ～ 100% 对应 1 ～ 100000 
+    //  @ts-ignore
+    "fee": userConfig.serviceFee *1000  // 0.001% ～ 100% 对应 1 ～ 100000 
   })
   return data
 }
